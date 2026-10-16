@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
@@ -93,6 +94,7 @@ fun IronBenchApp(model: IronBenchViewModel) {
                     NavItem(Section.Progreso, section, Icons.Filled.Star, "Progreso", Modifier.weight(1f)) { section = it }
                     NavItem(Section.Historial, section, Icons.Filled.DateRange, "Historial", Modifier.weight(1f)) { section = it }
                 }
+                BottomBanner()
             }
         },
     ) { padding ->
@@ -177,7 +179,15 @@ private fun WorkoutScreen(model: IronBenchViewModel, revision: Int) {
     ) {
         Text("Semana", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val dayStrip = rememberScrollState()
+        val density = LocalDensity.current
+        LaunchedEffect(model.selectedDay, dayStrip.maxValue) {
+            if (dayStrip.maxValue <= 0) return@LaunchedEffect
+            val index = WEEK.indexOfFirst { it.id == model.selectedDay }.coerceAtLeast(0)
+            val stride = with(density) { 116.dp.toPx() }
+            dayStrip.scrollTo((index * stride).toInt().coerceIn(0, dayStrip.maxValue))
+        }
+        Row(Modifier.horizontalScroll(dayStrip), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             WEEK.forEach { item ->
                 val selected = item.id == model.selectedDay
                 val rest = item.id in model.restDays
@@ -672,6 +682,7 @@ private fun PrivacyScreen(onClose: () -> Unit) {
         Policy("Conservación", "Los datos permanecen hasta que borras los datos de la app o la desinstalas.")
         Policy("Salud", "IRONBENCH no es consejo médico. Ajusta cargas y descansos a tu estado y, si hay dolor, para.")
         Policy("Menores", "La app no está dirigida a menores de edad.")
+        Policy("Anuncios", "En la parte inferior hay un banner de Google AdMob. Google puede tratar datos del dispositivo para mostrar ese anuncio. Tus series y medidas no se envían con el anuncio. Sin internet el banner no aparece y el entrenamiento sigue disponible.")
         Spacer(Modifier.height(16.dp))
         KineticButton("Cerrar", primary = true, onClick = onClose)
     }

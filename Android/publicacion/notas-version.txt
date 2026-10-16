@@ -1,0 +1,1 @@
+Versión 1.0: rutinas con foto, descanso a elección, progreso local y banner.
