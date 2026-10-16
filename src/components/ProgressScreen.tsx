@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnthropometricData, WeightHistoryPoint } from '../types';
 import { IMAGES } from '../data/mockData';
+import { historyDelta } from '../lib/metrics';
 import { ProgressTrendsChart } from './ProgressTrendsChart';
 
 interface ProgressScreenProps {
@@ -27,6 +28,23 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
   const [formThigh, setFormThigh] = useState<number>(data.muslo);
   const [formSavedToast, setFormSavedToast] = useState<boolean>(false);
 
+  useEffect(() => {
+    setFormWeight(data.peso);
+    setFormWaist(data.cintura);
+    setFormArm(data.biceps);
+    setFormChest(data.pecho);
+    setFormThigh(data.muslo);
+  }, [data]);
+
+  const weightChange = historyDelta(history, 'weight', data.peso);
+  const fatChange = historyDelta(history, 'bodyFat', data.grasaPct);
+  const waistChange = historyDelta(history, 'waist', data.cintura);
+  const chestChange = historyDelta(history, 'chest', data.pecho);
+  const armChange = historyDelta(history, 'arm', data.biceps);
+  const forearmChange = historyDelta(history, 'forearm', data.antebrazo);
+  const firstPoint = history[0];
+  const lastPoint = history[history.length - 1];
+
   const handleQuickSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onQuickUpdate({
@@ -45,7 +63,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
     <div className="space-y-8 animate-in fade-in duration-200">
       {/* Toast Notification */}
       {formSavedToast && (
-        <div className="fixed top-20 right-6 z-50 bg-[#171f33] border-2 border-[#c3f400] text-[#ffffff] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-4">
+        <div className="fixed top-20 left-4 right-4 sm:left-auto sm:right-6 z-50 bg-[#171f33] border-2 border-[#c3f400] text-[#ffffff] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-4">
           <span className="material-symbols-outlined text-[#c3f400]">check_circle</span>
           <div>
             <div className="font-bold text-xs">¡Medidas Guardadas Exitosamente!</div>
@@ -87,12 +105,12 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
 
       {/* PARTE 1: PANEL DE MEDIDAS Y CAMBIOS CORPORALES */}
       <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-['Montserrat'] font-bold text-lg sm:text-xl text-[#ffffff] flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#c3f400]">straighten</span>
-            <span>Panel Antropométrico & Registro de Composición</span>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <h2 className="font-['Montserrat'] font-bold text-lg sm:text-xl text-[#ffffff] flex items-start gap-2 min-w-0">
+            <span className="material-symbols-outlined text-[#c3f400] shrink-0">straighten</span>
+            <span>Panel Antropométrico y Registro de Composición</span>
           </h2>
-          <span className="text-[11px] font-semibold text-[#8e9379]">
+          <span className="text-[11px] font-semibold text-[#8e9379] shrink-0">
             Último pesaje: {data.fechaUltimoPesaje}
           </span>
         </div>
@@ -106,7 +124,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 PESO ACTUAL
               </span>
               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#c3f400]/10 text-[#c3f400] border border-[#c3f400]/30">
-                -2.1 kg (4 sem)
+                {weightChange.text} kg
               </span>
             </div>
             <div className="my-2">
@@ -116,8 +134,14 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
               </div>
             </div>
             <div className="flex items-center gap-1 text-[11px] text-[#abd600]">
-              <span className="material-symbols-outlined text-xs">trending_down</span>
-              <span>Ritmo ideal de pérdida grasa</span>
+              <span className="material-symbols-outlined text-xs">
+                {weightChange.direction === 'up' ? 'trending_up' : 'trending_down'}
+              </span>
+              <span>
+                {weightChange.direction === 'none'
+                  ? 'Aún no hay comparación'
+                  : 'Cambio desde el primer registro'}
+              </span>
             </div>
           </div>
 
@@ -135,7 +159,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 <span className="text-xs font-semibold text-[#c4c9ac]">%</span>
               </div>
             </div>
-            <span className="text-[10px] font-bold text-[#9cf0ff]">-1.4% vs inicio</span>
+            <span className="text-[10px] font-bold text-[#9cf0ff]">{fatChange.text}%</span>
           </div>
 
           {/* Cintura */}
@@ -152,7 +176,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 <span className="text-xs font-semibold text-[#c4c9ac]">cm</span>
               </div>
             </div>
-            <span className="text-[10px] font-bold text-[#c3f400]">-3.0 cm</span>
+            <span className="text-[10px] font-bold text-[#c3f400]">{waistChange.text} cm</span>
           </div>
 
           {/* Pecho */}
@@ -171,7 +195,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 <span className="text-xs font-semibold text-[#c4c9ac]">cm</span>
               </div>
             </div>
-            <span className="text-[10px] font-bold text-[#9cf0ff]">+2.0 cm hipertrofia</span>
+            <span className="text-[10px] font-bold text-[#9cf0ff]">{chestChange.text} cm</span>
           </div>
 
           {/* Bíceps / Brazo */}
@@ -190,7 +214,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 <span className="text-xs font-semibold text-[#c4c9ac]">cm</span>
               </div>
             </div>
-            <span className="text-[10px] font-bold text-[#9cf0ff]">+1.2 cm brazo</span>
+            <span className="text-[10px] font-bold text-[#9cf0ff]">{armChange.text} cm</span>
           </div>
 
           {/* Muslo & Antebrazo */}
@@ -211,7 +235,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
             </div>
             <div className="text-[10px] text-[#c4c9ac]">
               <span>
-                Antebrazo: <b className="text-[#ffffff]">{data.antebrazo} cm</b> (+0.8)
+                Antebrazo: <b className="text-[#ffffff]">{data.antebrazo} cm</b> ({forearmChange.text})
               </span>
             </div>
           </div>
@@ -229,7 +253,9 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 <span className="material-symbols-outlined text-[#c3f400] text-xl">emoji_events</span>
                 <div>
                   <p className="text-[10px] font-bold uppercase text-[#8e9379]">Hito Cintura</p>
-                  <p className="text-xs font-bold text-[#ffffff]">&lt; 85cm Logrado (-3cm)</p>
+                  <p className="text-xs font-bold text-[#ffffff]">
+                    {waistChange.direction === 'none' ? 'Sin historial de cintura' : `${waistChange.text} cm desde el inicio`}
+                  </p>
                 </div>
               </div>
 
@@ -239,7 +265,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 </span>
                 <div>
                   <p className="text-[10px] font-bold uppercase text-[#8e9379]">Quema Activa</p>
-                  <p className="text-xs font-bold text-[#ffffff]">1,450 kcal / sem</p>
+                  <p className="text-xs font-bold text-[#ffffff]">Objetivo del plan, no medido aquí</p>
                 </div>
               </div>
 
@@ -249,7 +275,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 </span>
                 <div>
                   <p className="text-[10px] font-bold uppercase text-[#8e9379]">Fuerza Mancuerna</p>
-                  <p className="text-xs font-bold text-[#ffffff]">+4 kg en Press Banca</p>
+                  <p className="text-xs font-bold text-[#ffffff]">El tonelaje vive en Historial</p>
                 </div>
               </div>
             </div>
@@ -290,19 +316,19 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
 
             {/* Interactive Before / After Slider Canvas */}
             <div
-              className="relative w-full h-72 rounded-lg overflow-hidden border border-[#444933]/50 select-none group bg-[#060e20]"
+              className="relative w-full h-72 rounded-lg overflow-hidden border border-[#444933]/50 select-none group bg-[#060e20] [container-type:inline-size]"
               id="comparison-box"
             >
               {/* "Después" Image (Underneath, full view) */}
               <div className="absolute inset-0 w-full h-full">
                 <img
-                  src={IMAGES.afterDay35}
-                  alt="Día 35 después del acondicionamiento"
+                  src={photoView === 'frontal' ? IMAGES.afterDay35 : IMAGES.trainerAvatar}
+                  alt={photoView === 'frontal' ? 'Vista frontal reciente' : 'Vista de perfil de referencia'}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
                 />
                 <span className="absolute top-3 right-3 text-xs font-['Inter'] font-bold px-2 py-1 bg-[#222a3d]/90 text-[#c3f400] border border-[#c3f400]/40 rounded-lg shadow-md">
-                  Día 35 (76.4 kg)
+                  {photoView === 'frontal' ? 'Frontal' : 'Perfil'} · {lastPoint ? `${lastPoint.weight} kg` : `${data.peso} kg`}
                 </span>
               </div>
 
@@ -311,16 +337,16 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 className="absolute inset-0 h-full overflow-hidden border-r-2 border-[#c3f400]"
                 style={{ width: `${sliderPosition}%` }}
               >
-                <div className="w-full h-full min-w-[320px] md:min-w-[420px]">
+                <div className="h-full w-[100cqi]">
                   <img
-                    src={IMAGES.beforeDay1}
-                    alt="Día 1 antes del acondicionamiento"
+                    src={photoView === 'frontal' ? IMAGES.beforeDay1 : IMAGES.avatar}
+                    alt={photoView === 'frontal' ? 'Vista frontal inicial' : 'Vista de perfil inicial'}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <span className="absolute top-3 left-3 text-xs font-['Inter'] font-bold px-2 py-1 bg-[#060e20]/90 text-[#ffffff] border border-[#444933] rounded-lg shadow-md">
-                  Día 1 (78.5 kg)
+                  {firstPoint ? `${firstPoint.day ?? 'Inicio'} (${firstPoint.weight} kg)` : 'Inicio'}
                 </span>
               </div>
 
@@ -350,7 +376,9 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
                 <span className="material-symbols-outlined text-xs">arrow_back</span>
                 Arrastra para comparar
               </span>
-              <span className="text-[#9cf0ff] font-bold">Tono muscular +18%</span>
+              <span className="text-[#9cf0ff] font-bold">
+                {photoView === 'perfil' ? 'Referencia de perfil' : 'Vista frontal'}
+              </span>
             </div>
           </div>
         </div>

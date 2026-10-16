@@ -22,10 +22,10 @@ export const MobileRestDock: React.FC<MobileRestDockProps> = ({
   };
 
   return (
-    <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#222a3d]/95 backdrop-blur-md px-4 py-2.5 border-t border-[#444933]/60 flex items-center justify-between shadow-2xl">
+    <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#222a3d]/95 backdrop-blur-md px-3 py-2.5 border-t border-[#444933]/60 flex items-center justify-between gap-2 overflow-hidden shadow-2xl pb-[max(0.625rem,env(safe-area-inset-bottom))]">
       <div
         onClick={onToggleTimer}
-        className="flex items-center gap-2.5 cursor-pointer select-none"
+        className="flex items-center gap-2 cursor-pointer select-none min-w-0"
       >
         <span
           className={`material-symbols-outlined text-[#ff5708] ${
@@ -36,7 +36,7 @@ export const MobileRestDock: React.FC<MobileRestDockProps> = ({
         </span>
         <div>
           <div className="text-[10px] text-[#8e9379] font-bold uppercase tracking-wider">
-            {isRunning ? 'DESCANSO ACTIVO' : 'CRONÓMETRO EN PAUSA'}
+            {isRunning ? 'Descanso' : 'En pausa'}
           </div>
           <div className="font-['Montserrat'] font-bold text-lg text-[#ff5708] tabular-nums">
             {formatTimer(seconds)}
@@ -53,9 +53,9 @@ export const MobileRestDock: React.FC<MobileRestDockProps> = ({
         </button>
         <button
           onClick={onNextSet}
-          className="px-3.5 py-1.5 bg-[#c3f400] text-[#161e00] text-xs font-['Inter'] font-bold rounded-lg shadow-md active:scale-95 transition-transform"
+          className="px-3 py-1.5 bg-[#c3f400] text-[#161e00] text-xs font-['Inter'] font-bold rounded-lg shadow-md active:scale-95 transition-transform whitespace-nowrap"
         >
-          Siguiente Serie
+          Siguiente
         </button>
       </div>
     </div>

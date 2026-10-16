@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { WeekDayId, WorkoutExercise } from '../types';
 import { WEEK_PLANS } from '../data/mockData';
+import { currentWeekDayId } from '../lib/metrics';
 
 interface WorkoutScreenProps {
   exercises: WorkoutExercise[];
+  selectedDay: WeekDayId;
+  onSelectDay: (day: WeekDayId) => void;
   onToggleSet: (exerciseId: number, setId: string) => void;
   onUpdateWeight: (exerciseId: number, setId: string, delta: number) => void;
   onOpenTechniqueModal: (exerciseName: string, category: string, tempo: string, imageUrl?: string) => void;
-  onFinishWorkout: (rpe: number, notes: string) => void;
+  onFinishWorkout: (rpe: number, notes: string) => boolean;
   onUpdateExerciseRpe: (exerciseId: number, rpe: number) => void;
   restTimerSeconds: number;
   isTimerRunning: boolean;
@@ -16,6 +19,8 @@ interface WorkoutScreenProps {
   onSkipTimer: () => void;
   isWorkoutActive: boolean;
   onStartSession: () => void;
+  restDays: WeekDayId[];
+  onToggleRestDay: (day: WeekDayId) => void;
 }
 
 interface ExerciseRpeTrackerProps {
@@ -151,6 +156,8 @@ const ExerciseRpeTracker: React.FC<ExerciseRpeTrackerProps> = ({
 
 export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
   exercises,
+  selectedDay,
+  onSelectDay,
   onToggleSet,
   onUpdateWeight,
   onOpenTechniqueModal,
@@ -163,12 +170,32 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
   onSkipTimer,
   isWorkoutActive,
   onStartSession,
+  restDays,
+  onToggleRestDay,
 }) => {
-  const [selectedDay, setSelectedDay] = useState<WeekDayId>('LUN');
   const [warmupCompleted, setWarmupCompleted] = useState<boolean>(false);
   const [selectedRpe, setSelectedRpe] = useState<number>(8);
-  const [sessionNotes, setSessionNotes] = useState<string>('Excelente agarre con 24kg, codos sin molestias...');
+  const [sessionNotes, setSessionNotes] = useState<string>('');
   const [showSaveAlert, setShowSaveAlert] = useState<boolean>(false);
+  const [saveWarning, setSaveWarning] = useState<string>('');
+  const activePlan = WEEK_PLANS.find((day) => day.id === selectedDay) ?? WEEK_PLANS[0];
+  const todayId = currentWeekDayId();
+  const isRestDay = restDays.includes(selectedDay);
+
+  const dayRailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const selected = dayRailRef.current?.querySelector<HTMLElement>('[data-selected="true"]');
+    selected?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [selectedDay]);
+
+  useEffect(() => {
+    setWarmupCompleted(false);
+    setSessionNotes('');
+    setSelectedRpe(8);
+    setSaveWarning('');
+    setShowSaveAlert(false);
+  }, [selectedDay]);
 
   // Calculate dynamic progress
   const totalSets = exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
@@ -188,7 +215,21 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
   };
 
   const handleSaveSession = () => {
-    onFinishWorkout(selectedRpe, sessionNotes);
+    if (!isRestDay && completedSets === 0) {
+      setSaveWarning('Marca al menos una serie antes de guardar la sesión.');
+      return;
+    }
+    const saved = onFinishWorkout(selectedRpe, sessionNotes);
+    if (!saved) {
+      setSaveWarning(
+        isRestDay
+          ? 'Este descanso ya quedó registrado hoy.'
+          : 'Marca al menos una serie antes de guardar la sesión.'
+      );
+      return;
+    }
+    setSaveWarning('');
+    setSessionNotes('');
     setShowSaveAlert(true);
     setTimeout(() => setShowSaveAlert(false), 3500);
   };
@@ -197,7 +238,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
     <div className="space-y-8 animate-in fade-in duration-200">
       {/* Toast alert on save */}
       {showSaveAlert && (
-        <div className="fixed top-20 right-6 z-50 bg-[#171f33] border-2 border-[#c3f400] text-[#ffffff] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-4">
+        <div className="fixed top-20 left-4 right-4 sm:left-auto sm:right-6 z-50 bg-[#171f33] border-2 border-[#c3f400] text-[#ffffff] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-4">
           <span className="material-symbols-outlined text-[#c3f400]">check_circle</span>
           <div>
             <div className="font-bold text-xs">¡Sesión Guardada con Éxito!</div>
@@ -235,9 +276,12 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                 ESTADO DE HOY
               </div>
               <div className="font-['Montserrat'] font-bold text-xl text-[#c3f400]">
-                {selectedDay === 'LUN' ? 'LUNES ACTIVO' : `${selectedDay} PROGRAMADO`}
+                {activePlan.name.toUpperCase()}
+                {selectedDay === todayId ? ' · HOY' : ''}
               </div>
-              <div className="text-xs text-[#c4c9ac]">Pecho & Tríceps • 38 min</div>
+              <div className="text-xs text-[#c4c9ac]">
+                {activePlan.focus} • {activePlan.duration > 0 ? `${activePlan.duration} min` : 'Sin sesión'}
+              </div>
             </div>
             <div className="w-12 h-12 rounded-lg bg-[#222a3d] border border-[#444933] flex items-center justify-center text-[#c3f400] flex-shrink-0">
               <span className="material-symbols-outlined text-2xl">fitness_center</span>
@@ -246,17 +290,19 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
         </div>
 
         {/* Weekly Selector Rail */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 overflow-x-auto pb-1 custom-scrollbar">
+        <div ref={dayRailRef} className="flex gap-2.5 overflow-x-auto pb-1 snap-x snap-mandatory lg:grid lg:grid-cols-7 lg:overflow-visible custom-scrollbar">
           {WEEK_PLANS.map((day) => {
             const isSelected = selectedDay === day.id;
+            const isUserRest = restDays.includes(day.id);
             return (
               <button
                 key={day.id}
-                onClick={() => setSelectedDay(day.id)}
-                className={`text-left p-4 rounded-xl flex flex-col justify-between h-36 transition-all cursor-pointer relative ${
+                onClick={() => onSelectDay(day.id)}
+                data-selected={isSelected ? 'true' : 'false'}
+                className={`snap-start shrink-0 w-[42vw] max-w-[168px] lg:w-auto lg:max-w-none text-left p-3 sm:p-4 rounded-xl flex flex-col justify-between h-32 lg:h-36 transition-all cursor-pointer relative ${
                   isSelected
                     ? 'bg-[#222a3d] border-2 border-[#c3f400] shadow-[0_0_20px_-4px_rgba(195,244,0,0.35)] scale-[1.01]'
-                    : day.isRest
+                    : isUserRest
                     ? 'bg-[#060e20] border border-[#444933]/30 opacity-70 hover:opacity-100 hover:border-[#444933]'
                     : 'bg-[#171f33] border border-[#444933]/40 hover:border-[#8e9379]'
                 }`}
@@ -269,14 +315,16 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                   >
                     {day.id}
                   </span>
-                  {day.isToday && (
-                    <span className="w-2 h-2 rounded-full bg-[#c3f400] animate-ping" />
-                  )}
-                  {day.isRest && (
-                    <span className="material-symbols-outlined text-xs text-[#8e9379]">
-                      bedtime
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1">
+                    {day.id === todayId && (
+                      <span className="w-2 h-2 rounded-full bg-[#c3f400] animate-ping" />
+                    )}
+                    {isUserRest && (
+                      <span className="material-symbols-outlined text-xs text-[#8e9379]">
+                        bedtime
+                      </span>
+                    )}
+                  </span>
                 </div>
 
                 <div>
@@ -293,14 +341,73 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                 </div>
 
                 <div className="text-[10px] text-[#9cf0ff] font-semibold">
-                  {day.exerciseCount > 0 ? `${day.exerciseCount} Ejercicios` : 'Recuperación'}
+                  {isUserRest ? 'Descanso' : day.exerciseCount > 0 ? `${day.exerciseCount} Ejercicios` : 'Sin rutina'}
                 </div>
               </button>
             );
           })}
         </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onToggleRestDay(selectedDay)}
+            className={`self-start px-4 py-2.5 rounded-lg font-['Inter'] font-bold text-xs uppercase tracking-wider cursor-pointer transition-colors ${
+              isRestDay
+                ? 'bg-[#222a3d] border border-[#c3f400] text-[#c3f400] hover:bg-[#2d3449]'
+                : 'bg-[#171f33] border border-[#444933] text-[#dae2fd] hover:border-[#8e9379]'
+            }`}
+          >
+            {isRestDay ? `Entrenar el ${activePlan.name}` : `Descansar el ${activePlan.name}`}
+          </button>
+          <p className="text-xs text-[#8e9379]">
+            El descanso lo eliges tú, en el día que quieras, y puedes cambiarlo cuando quieras.
+          </p>
+        </div>
       </section>
 
+      {isRestDay ? (
+        <section className="bg-[#171f33] border border-[#444933]/60 rounded-xl p-6 sm:p-8 max-w-2xl space-y-4">
+          <div className="flex items-center gap-2 text-[#c3f400]">
+            <span className="material-symbols-outlined">bedtime</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Día de recuperación</span>
+          </div>
+          <h2 className="font-['Montserrat'] font-bold text-2xl text-[#ffffff]">{activePlan.sessionTitle}</h2>
+          <p className="text-sm text-[#c4c9ac] leading-relaxed">
+            Marcaste {activePlan.name} como descanso. La rutina sigue guardada: cuando quieras entrenar, vuelve a activar el día. Registrar el descanso cuenta para la racha una sola vez al día y no suma volumen.
+          </p>
+          <textarea
+            value={sessionNotes}
+            onChange={(e) => setSessionNotes(e.target.value)}
+            className="w-full bg-[#060e20] border border-[#444933]/60 rounded-lg p-3 text-xs text-[#ffffff] placeholder-[#8e9379] focus:border-[#c3f400] focus:outline-none resize-none"
+            rows={3}
+            placeholder="Opcional: sueño, molestias, caminata suave..."
+          />
+          {saveWarning && <p className="text-[11px] font-semibold text-[#ffb59c]">{saveWarning}</p>}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleSaveSession}
+              className="px-5 py-2.5 bg-[#c3f400] hover:bg-[#abd600] text-[#161e00] font-bold text-xs uppercase tracking-wider rounded-lg cursor-pointer"
+            >
+              Registrar día de descanso
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleRestDay(selectedDay)}
+              className="px-5 py-2.5 bg-[#222a3d] border border-[#444933] text-[#dae2fd] font-bold text-xs uppercase tracking-wider rounded-lg cursor-pointer hover:border-[#c3f400]"
+            >
+              Volver a entrenar
+            </button>
+          </div>
+        </section>
+      ) : exercises.length === 0 ? (
+        <section className="bg-[#171f33] border border-[#444933]/60 rounded-xl p-6 sm:p-8 max-w-2xl space-y-3">
+          <h2 className="font-['Montserrat'] font-bold text-xl text-[#ffffff]">Sin rutina en {activePlan.name}</h2>
+          <p className="text-sm text-[#c4c9ac] leading-relaxed">
+            Este día no tiene ejercicios cargados. Si quieres recuperarte, márcalo como descanso. Si no, elige otro día de la semana.
+          </p>
+        </section>
+      ) : (
+      <>
       {/* WORKOUT CONTROL HUB & PROGRESSION HEADER */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Main Status Card (8 cols) */}
@@ -312,14 +419,14 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                 <span>SESIÓN EN CURSO • PROTOCOLO HIPERTROFIA RÁPIDA</span>
               </div>
               <h2 className="font-['Montserrat'] font-bold text-xl sm:text-2xl text-[#ffffff]">
-                Pecho Dominante & Tríceps Asistido
+                {activePlan.sessionTitle}
               </h2>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <div className="text-[10px] uppercase font-bold text-[#8e9379]">DURACIÓN ESTIMADA</div>
                 <div className="font-['Montserrat'] font-extrabold text-2xl text-[#c3f400]">
-                  38 <span className="text-xs font-normal text-[#c4c9ac]">min</span>
+                  {activePlan.duration} <span className="text-xs font-normal text-[#c4c9ac]">min</span>
                 </div>
               </div>
               <div className="h-8 w-[1px] bg-[#444933]" />
@@ -355,23 +462,19 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 
           {/* Muscle Inset Badges */}
           <div className="flex flex-wrap items-center gap-1.5 mt-4 pt-1">
-            <span className="px-2.5 py-1 rounded bg-[#9cf0ff]/10 text-[#9cf0ff] border border-[#9cf0ff]/30 text-[10px] font-bold uppercase">
-              PECTORAL MAYOR
-            </span>
-            <span className="px-2.5 py-1 rounded bg-[#9cf0ff]/10 text-[#9cf0ff] border border-[#9cf0ff]/30 text-[10px] font-bold uppercase">
-              FASCÍCULO CLAVICULAR
-            </span>
-            <span className="px-2.5 py-1 rounded bg-[#c3f400]/10 text-[#c3f400] border border-[#c3f400]/30 text-[10px] font-bold uppercase">
-              TRÍCEPS BRAQUIAL
-            </span>
-            <span className="px-2.5 py-1 rounded bg-[#222a3d] text-[#c4c9ac] border border-[#444933]/40 text-[10px] font-medium uppercase">
-              BANCO: PLANO & 30°
-            </span>
+            {activePlan.muscleTags.map((tag) => (
+              <span
+                key={tag}
+                className="px-2.5 py-1 rounded bg-[#222a3d] text-[#c4c9ac] border border-[#444933]/40 text-[10px] font-bold uppercase"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
         </div>
 
         {/* Quick Session Timer Dock (4 cols) */}
-        <div className="lg:col-span-4 bg-[#222a3d] border border-[#444933] rounded-xl p-5 flex flex-col justify-between shadow-lg">
+        <div className="hidden sm:flex lg:col-span-4 bg-[#222a3d] border border-[#444933] rounded-xl p-5 flex-col justify-between shadow-lg">
           <div className="flex items-center justify-between">
             <span className="text-xs font-['Inter'] font-bold text-[#ff5708] flex items-center gap-1.5">
               <span className="material-symbols-outlined text-base animate-pulse">timer</span>
@@ -425,11 +528,11 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* EXERCISES LIST (8 Columns) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-['Montserrat'] font-bold text-xl text-[#ffffff] flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-['Montserrat'] font-bold text-lg sm:text-xl text-[#ffffff] flex items-center gap-2 min-w-0">
               <span>Ejercicios Programados</span>
               <span className="text-[11px] font-bold px-2.5 py-0.5 bg-[#171f33] text-[#c3f400] border border-[#c3f400]/30 rounded-full">
-                5 BLOQUES
+                {exercises.length} BLOQUES
               </span>
             </h2>
             <button
@@ -491,15 +594,19 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                 {/* Technique banner */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-[#131b2e] rounded-xl p-4 border border-[#444933]/40">
                   <div className="md:col-span-4 h-32 rounded-lg overflow-hidden relative border border-[#444933]/50">
-                    <img
-                      src={exercises[0].imageUrl}
-                      alt={exercises[0].name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-1 right-1 bg-[#060e20]/90 px-1.5 py-0.5 rounded text-[10px] text-[#c3f400] font-bold">
-                      {exercises[0].angleBadge}
-                    </div>
+                    {exercises[0].imageUrl && (
+                      <img
+                        src={exercises[0].imageUrl}
+                        alt={exercises[0].name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                    {exercises[0].angleBadge && (
+                      <div className="absolute bottom-1 right-1 bg-[#060e20]/90 px-1.5 py-0.5 rounded text-[10px] text-[#c3f400] font-bold">
+                        {exercises[0].angleBadge}
+                      </div>
+                    )}
                   </div>
                   <div className="md:col-span-8 flex flex-col justify-between">
                     <div>
@@ -516,7 +623,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                         ))}
                       </ul>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-[#c4c9ac] border-t border-[#444933]/30 pt-1.5 mt-2">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#c4c9ac] border-t border-[#444933]/30 pt-1.5 mt-2">
                       <span>
                         Carga sugerida: <strong className="text-[#ffffff]">{exercises[0].suggestedLoad}</strong>
                       </span>
@@ -529,7 +636,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
 
                 {/* Set Rows Table */}
                 <div className="space-y-2">
-                  <div className="grid grid-cols-12 text-[10px] font-bold uppercase tracking-wider text-[#8e9379] px-4 py-1">
+                  <div className="hidden sm:grid grid-cols-12 text-[10px] font-bold uppercase tracking-wider text-[#8e9379] px-4 py-1">
                     <span className="col-span-2">SERIE</span>
                     <span className="col-span-4">PESO (POR MANCUERNA)</span>
                     <span className="col-span-3">REPETICIONES</span>
@@ -541,7 +648,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                     return (
                       <div
                         key={set.id}
-                        className={`grid grid-cols-12 items-center px-4 py-2.5 rounded-lg border transition-all ${
+                        className={`flex flex-wrap items-center justify-between gap-2 sm:grid sm:grid-cols-12 px-3 sm:px-4 py-2.5 rounded-lg border transition-all ${
                           set.completed
                             ? 'bg-[#131b2e] border-[#444933]/40'
                             : isLive
@@ -550,7 +657,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                         }`}
                       >
                         <span
-                          className={`col-span-2 text-xs font-bold ${
+                          className={`sm:col-span-2 text-xs font-bold min-w-0 ${
                             isLive ? 'text-[#c3f400] flex items-center gap-1' : 'text-[#c4c9ac]'
                           }`}
                         >
@@ -558,7 +665,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                           {set.label}
                         </span>
 
-                        <div className="col-span-4 flex items-center gap-2">
+                        <div className="sm:col-span-4 flex items-center gap-2">
                           {isLive ? (
                             <>
                               <button
@@ -584,11 +691,11 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                           )}
                         </div>
 
-                        <span className="col-span-3 text-xs font-semibold text-[#ffffff]">
+                        <span className="sm:col-span-3 text-xs font-semibold text-[#ffffff]">
                           {set.reps} reps
                         </span>
 
-                        <div className="col-span-3 flex justify-end">
+                        <div className="sm:col-span-3 flex justify-end">
                           <button
                             onClick={() => onToggleSet(exercises[0].id, set.id)}
                             className={`w-7 h-7 rounded-md flex items-center justify-center transition-all cursor-pointer ${
@@ -669,15 +776,19 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                 {/* Visual Banner */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-[#131b2e] rounded-xl p-4 border border-[#444933]/40">
                   <div className="md:col-span-4 h-28 rounded-lg overflow-hidden relative border border-[#444933]/50">
-                    <img
-                      src={exercises[1].imageUrl}
-                      alt={exercises[1].name}
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-1 right-1 bg-[#060e20]/90 px-1.5 py-0.5 rounded text-[10px] text-[#9cf0ff] font-bold">
-                      {exercises[1].angleBadge}
-                    </div>
+                    {exercises[1].imageUrl && (
+                      <img
+                        src={exercises[1].imageUrl}
+                        alt={exercises[1].name}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                    {exercises[1].angleBadge && (
+                      <div className="absolute bottom-1 right-1 bg-[#060e20]/90 px-1.5 py-0.5 rounded text-[10px] text-[#9cf0ff] font-bold">
+                        {exercises[1].angleBadge}
+                      </div>
+                    )}
                   </div>
                   <div className="md:col-span-8 flex flex-col justify-center">
                     <div className="text-[10px] font-bold text-[#9cf0ff] uppercase tracking-wider mb-1">
@@ -686,7 +797,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                     <p className="text-xs text-[#c4c9ac] leading-relaxed">
                       {exercises[1].coachTip}
                     </p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-[#c3f400]">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-[#c3f400]">
                       <span className="flex items-center gap-1">
                         <span className="material-symbols-outlined text-sm">timer</span> 60s entre series
                       </span>
@@ -906,7 +1017,7 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
               </span>
             </div>
             <p className="text-xs text-[#c4c9ac] mb-3 leading-relaxed">
-              Indica tu esfuerzo percibido para calibrar las cargas de la próxima sesión de pecho.
+              Indica tu esfuerzo percibido para calibrar las cargas de la próxima sesión de {activePlan.focus.toLowerCase()}.
             </p>
 
             {/* RPE Gauge Dial Selector */}
@@ -943,7 +1054,9 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
               <div className="flex items-center justify-between text-[11px] font-bold text-[#c4c9ac]">
                 <span>RPE por Movimiento:</span>
                 <span className="text-[#c3f400] font-mono">
-                  Promedio: {(exercises.reduce((a, b) => a + (b.actualRpe || b.targetRpe || 8), 0) / exercises.length).toFixed(1)}
+                  Promedio: {exercises.length > 0
+                    ? (exercises.reduce((a, b) => a + (b.actualRpe || b.targetRpe || 8), 0) / exercises.length).toFixed(1)
+                    : '—'}
                 </span>
               </div>
               <div className="space-y-1">
@@ -974,11 +1087,14 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
               />
             </div>
 
+            {saveWarning && (
+              <p className="mt-3 text-[11px] font-semibold text-[#ffb59c]">{saveWarning}</p>
+            )}
             <button
               onClick={handleSaveSession}
               className="w-full mt-4 py-2.5 bg-[#c3f400] hover:bg-[#abd600] text-[#161e00] font-['Inter'] font-bold text-xs uppercase tracking-wider rounded-lg transition-transform active:scale-[0.98] shadow-md cursor-pointer"
             >
-              Guardar & Finalizar Sesión
+              {isRestDay ? 'Registrar día de descanso' : 'Guardar y finalizar sesión'}
             </button>
           </div>
 
@@ -996,6 +1112,8 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
           </div>
         </aside>
       </div>
+      </>
+      )}
     </div>
   );
 };

@@ -11,6 +11,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ logs, streakDays }
 
   const totalVolume = logs.reduce((acc, log) => acc + log.totalVolumeKg, 0);
   const totalMinutes = logs.reduce((acc, log) => acc + log.durationMinutes, 0);
+  const averageMinutes = logs.length > 0 ? Math.round(totalMinutes / logs.length) : 0;
   const averageRpe = (logs.reduce((acc, log) => acc + log.rpe, 0) / (logs.length || 1)).toFixed(1);
 
   const filteredLogs = logs.filter(
@@ -54,7 +55,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ logs, streakDays }
           <div className="font-['Montserrat'] font-extrabold text-3xl text-[#ffffff] mt-1">
             {logs.length}
           </div>
-          <span className="text-[11px] text-[#c3f400]">100% consistencia</span>
+          <span className="text-[11px] text-[#c3f400]">{logs.length === 0 ? 'Sin sesiones' : 'Sesiones guardadas'}</span>
         </div>
 
         <div className="bg-[#171f33] border border-[#444933]/50 rounded-xl p-4">
@@ -70,7 +71,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ logs, streakDays }
           <div className="font-['Montserrat'] font-extrabold text-3xl text-[#ffffff] mt-1">
             {totalMinutes} <span className="text-sm font-normal text-[#c4c9ac]">min</span>
           </div>
-          <span className="text-[11px] text-[#8e9379]">Promedio 36 min/sesión</span>
+          <span className="text-[11px] text-[#8e9379]">Promedio {averageMinutes} min/sesión</span>
         </div>
 
         <div className="bg-[#171f33] border border-[#444933]/50 rounded-xl p-4">
@@ -117,7 +118,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ logs, streakDays }
                 </h3>
               </div>
 
-              <div className="flex items-center gap-4 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="text-right">
                   <div className="text-[10px] uppercase font-bold text-[#8e9379]">Volumen Total</div>
                   <div className="font-mono font-bold text-sm text-[#c3f400]">

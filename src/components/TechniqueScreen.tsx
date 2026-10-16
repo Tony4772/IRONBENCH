@@ -243,7 +243,7 @@ export const TechniqueScreen: React.FC<TechniqueScreenProps> = ({ onOpenVideoMod
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full min-w-[720px] text-left text-xs">
             <thead>
               <tr className="border-b border-[#444933]/40 text-[#8e9379] font-bold text-[10px] uppercase">
                 <th className="py-2.5 px-3">EJERCICIO</th>

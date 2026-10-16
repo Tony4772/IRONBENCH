@@ -6,6 +6,8 @@ export interface WeekDayPlan {
   id: WeekDayId;
   name: string;
   focus: string;
+  sessionTitle: string;
+  muscleTags: string[];
   duration: number;
   exerciseCount: number;
   subtitle: string;
@@ -37,6 +39,8 @@ export interface WorkoutExercise {
   suggestedLoad?: string;
   targetRpe?: number;
   actualRpe?: number;
+  /** Dos mancuernas: el volumen suma ambas. Una mancuerna o lastre único no se duplica. */
+  bilateral?: boolean;
   coachTip?: string;
   notes?: string;
   sets: SetRow[];
@@ -62,8 +66,13 @@ export interface WeightHistoryPoint {
   weight: number;
   waist: number;
   arm: number;
+  chest?: number;
+  thigh?: number;
+  forearm?: number;
+  bodyFat?: number;
   date?: string;
   day?: string;
+  isoDate?: string;
 }
 
 export interface TechnicalExerciseItem {
@@ -108,4 +117,5 @@ export interface CompletedWorkoutLog {
   totalVolumeKg: number;
   rpe: number;
   notes: string;
+  isoDate?: string;
 }

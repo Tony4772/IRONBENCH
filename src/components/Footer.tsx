@@ -4,24 +4,25 @@ interface FooterProps {
   onOpenGuide: () => void;
   onOpen1RM: () => void;
   onOpenSupport: () => void;
-  onOpenTerms: () => void;
+  onOpenPrivacy: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
   onOpenGuide,
   onOpen1RM,
   onOpenSupport,
-  onOpenTerms,
+  onOpenPrivacy,
 }) => {
   return (
-    <footer className="w-full py-8 px-4 sm:px-8 border-t border-[#444933]/40 flex flex-col md:flex-row items-center justify-between gap-4 bg-[#060e20] text-[#c4c9ac] mt-12">
+    <footer className="w-full pt-8 pb-28 sm:py-8 px-4 sm:px-8 border-t border-[#444933]/40 flex flex-col md:flex-row items-center justify-between gap-4 bg-[#060e20] text-[#c4c9ac] mt-12">
       <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-[#c3f400] text-xl">fitness_center</span>
           <span className="font-['Montserrat'] font-bold text-base text-[#ffffff] tracking-tight">IRONBENCH</span>
         </div>
         <p className="font-['Inter'] text-xs text-[#8e9379] max-w-md">
-          © 2025 IRONBENCH High-Performance Conditioning. Mancuernas y banco sin excusas.
+          Diseño y creación de <span className="text-[#ffffff]">EBYZOM E.I.R.L.</span>
+          <span className="block mt-1">© 2026 IRONBENCH. Mancuernas y banco sin excusas.</span>
         </p>
       </div>
 
@@ -45,10 +46,10 @@ export const Footer: React.FC<FooterProps> = ({
           Calculadora 1RM
         </button>
         <button
-          onClick={onOpenTerms}
+          onClick={onOpenPrivacy}
           className="text-[#c4c9ac] hover:text-[#c3f400] transition-colors cursor-pointer"
         >
-          Términos y Privacidad
+          Política de privacidad
         </button>
       </div>
     </footer>

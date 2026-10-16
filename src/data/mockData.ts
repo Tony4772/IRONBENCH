@@ -26,9 +26,11 @@ export const WEEK_PLANS: WeekDayPlan[] = [
     id: 'LUN',
     name: 'Lunes',
     focus: 'Pecho & Tríceps',
+    sessionTitle: 'Pecho Dominante & Tríceps Asistido',
+    muscleTags: ['Pectoral mayor', 'Fascículo clavicular', 'Tríceps braquial', 'Banco: plano y 30°'],
     duration: 38,
     exerciseCount: 5,
-    subtitle: '38 min • Hoy',
+    subtitle: '38 min',
     tagColor: '#c3f400',
     isToday: true,
   },
@@ -36,6 +38,8 @@ export const WEEK_PLANS: WeekDayPlan[] = [
     id: 'MAR',
     name: 'Martes',
     focus: 'Piernas & Abs',
+    sessionTitle: 'Piernas Unilaterales & Core',
+    muscleTags: ['Cuádriceps', 'Glúteo', 'Isquios', 'Abdomen'],
     duration: 40,
     exerciseCount: 5,
     subtitle: '40 min',
@@ -45,6 +49,8 @@ export const WEEK_PLANS: WeekDayPlan[] = [
     id: 'MIÉ',
     name: 'Miércoles',
     focus: 'Descanso Activo',
+    sessionTitle: 'Movilidad & Core Ligero',
+    muscleTags: ['Hombros', 'Core', 'Cadera'],
     duration: 20,
     exerciseCount: 3,
     subtitle: '20 min Core',
@@ -55,6 +61,8 @@ export const WEEK_PLANS: WeekDayPlan[] = [
     id: 'JUE',
     name: 'Jueves',
     focus: 'Espalda & Bíceps',
+    sessionTitle: 'Espalda & Bíceps Hipertrofia',
+    muscleTags: ['Dorsal', 'Romboides', 'Bíceps', 'Antebrazo'],
     duration: 36,
     exerciseCount: 5,
     subtitle: '36 min',
@@ -64,6 +72,8 @@ export const WEEK_PLANS: WeekDayPlan[] = [
     id: 'VIE',
     name: 'Viernes',
     focus: 'Piernas & Hombros',
+    sessionTitle: 'Piernas & Hombros Potencia',
+    muscleTags: ['Cuádriceps', 'Glúteo', 'Deltoides', 'Core'],
     duration: 39,
     exerciseCount: 5,
     subtitle: '39 min',
@@ -73,6 +83,8 @@ export const WEEK_PLANS: WeekDayPlan[] = [
     id: 'SÁB',
     name: 'Sábado',
     focus: 'Full-Body HIIT',
+    sessionTitle: 'Full-Body HIIT con Mancuerna',
+    muscleTags: ['Cuerpo completo', 'Pecho', 'Piernas', 'Core'],
     duration: 30,
     exerciseCount: 4,
     subtitle: '30 min Tempo',
@@ -82,6 +94,8 @@ export const WEEK_PLANS: WeekDayPlan[] = [
     id: 'DOM',
     name: 'Domingo',
     focus: 'Descanso Total',
+    sessionTitle: 'Recuperación total',
+    muscleTags: [],
     duration: 0,
     exerciseCount: 0,
     subtitle: 'Recuperación',
@@ -108,6 +122,7 @@ export const INITIAL_EXERCISES: WorkoutExercise[] = [
     suggestedLoad: '22-26 kg / mancuerna',
     targetRpe: 8.5,
     actualRpe: 8.5,
+    bilateral: true,
     completedCount: 2,
     totalSets: 4,
     sets: [
@@ -131,6 +146,7 @@ export const INITIAL_EXERCISES: WorkoutExercise[] = [
     suggestedLoad: '18 - 22 kg',
     targetRpe: 8.0,
     actualRpe: 8.0,
+    bilateral: true,
     completedCount: 0,
     totalSets: 3,
     sets: [
@@ -149,6 +165,7 @@ export const INITIAL_EXERCISES: WorkoutExercise[] = [
     coachTip:
       'Mantén los codos apuntando al techo sin balancear los hombros. Estira al máximo en el punto bajo.',
     suggestedLoad: '14.0 kg (Mancuerna única)',
+    bilateral: false,
     targetRpe: 8.0,
     actualRpe: 7.5,
     completedCount: 0,
@@ -169,6 +186,7 @@ export const INITIAL_EXERCISES: WorkoutExercise[] = [
     coachTip:
       'Mantén la pelvis pegada al borde vertical del banco durante todo el recorrido para no forzar los manguitos rotadores.',
     suggestedLoad: '+16.0 kg en cadera',
+    bilateral: false,
     targetRpe: 8.5,
     actualRpe: 8.0,
     completedCount: 0,
@@ -189,6 +207,7 @@ export const INITIAL_EXERCISES: WorkoutExercise[] = [
     coachTip:
       'Ancla tus manos firmemente detrás de la cabeza en el borde superior del banco para contraer la pared abdominal inferior.',
     suggestedLoad: 'Peso Corporal + Isometría 2s',
+    bilateral: false,
     targetRpe: 9.0,
     actualRpe: 8.5,
     completedCount: 0,
@@ -214,11 +233,11 @@ export const INITIAL_ANTHROPOMETRICS: AnthropometricData = {
 };
 
 export const WEIGHT_HISTORY: WeightHistoryPoint[] = [
-  { week: 'Sem 1', label: 'Día 1 (Sem 1)', day: 'Día 1', date: '16 Sep', weight: 78.5, waist: 85.0, arm: 35.3 },
-  { week: 'Sem 2', label: 'Día 7 (Sem 2)', day: 'Día 7', date: '23 Sep', weight: 77.9, waist: 84.2, arm: 35.6 },
-  { week: 'Sem 3', label: 'Día 14 (Sem 3)', day: 'Día 14', date: '30 Sep', weight: 77.2, waist: 83.5, arm: 35.9 },
-  { week: 'Sem 4', label: 'Día 21 (Sem 4)', day: 'Día 21', date: '07 Oct', weight: 76.8, waist: 82.6, arm: 36.2 },
-  { week: 'Sem 5', label: 'Día 30 (Hoy)', day: 'Día 30', date: '15 Oct', weight: 76.4, waist: 82.0, arm: 36.5 },
+  { week: 'Sem 1', label: 'Día 1 (Sem 1)', day: 'Día 1', date: '16 Sep', isoDate: '2026-09-16', weight: 78.5, waist: 85.0, arm: 35.3, chest: 99.0, thigh: 56.5, forearm: 29.7, bodyFat: 17.6 },
+  { week: 'Sem 2', label: 'Día 7 (Sem 2)', day: 'Día 7', date: '23 Sep', isoDate: '2026-09-23', weight: 77.9, waist: 84.2, arm: 35.6, chest: 99.4, thigh: 56.8, forearm: 29.9, bodyFat: 17.2 },
+  { week: 'Sem 3', label: 'Día 14 (Sem 3)', day: 'Día 14', date: '30 Sep', isoDate: '2026-09-30', weight: 77.2, waist: 83.5, arm: 35.9, chest: 99.8, thigh: 57.2, forearm: 30.1, bodyFat: 16.8 },
+  { week: 'Sem 4', label: 'Día 21 (Sem 4)', day: 'Día 21', date: '07 Oct', isoDate: '2026-10-07', weight: 76.8, waist: 82.6, arm: 36.2, chest: 100.4, thigh: 57.6, forearm: 30.3, bodyFat: 16.5 },
+  { week: 'Sem 5', label: 'Día 30 (Hoy)', day: 'Día 30', date: '15 Oct', isoDate: '2026-10-15', weight: 76.4, waist: 82.0, arm: 36.5, chest: 101.0, thigh: 58.0, forearm: 30.5, bodyFat: 16.2 },
 ];
 
 export const TECHNICAL_EXERCISES: TechnicalExerciseItem[] = [

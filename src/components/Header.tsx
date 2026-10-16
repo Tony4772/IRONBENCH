@@ -33,17 +33,17 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between w-full px-4 sm:px-8 h-16 bg-[#171f33]/95 backdrop-blur-md border-b border-[#444933]/50 shadow-lg">
+    <header className="sticky top-0 z-50 flex items-center justify-between gap-2 w-full min-w-0 px-3 sm:px-8 h-16 bg-[#171f33]/95 backdrop-blur-md border-b border-[#444933]/50 shadow-lg">
       {/* Brand & Desktop Nav */}
-      <div className="flex items-center gap-6 lg:gap-8">
+      <div className="flex items-center gap-6 lg:gap-8 min-w-0">
         <button
           onClick={() => setActiveTab('rutinas')}
-          className="flex items-center gap-2 cursor-pointer text-left focus:outline-none"
+          className="flex items-center gap-2 cursor-pointer text-left focus:outline-none min-w-0"
         >
-          <span className="material-symbols-outlined text-[#c3f400] text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+          <span className="material-symbols-outlined text-[#c3f400] text-2xl shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>
             fitness_center
           </span>
-          <span className="font-['Montserrat'] font-extrabold text-lg sm:text-xl tracking-tight text-[#c3f400] uppercase">
+          <span className="max-[340px]:hidden font-['Montserrat'] font-extrabold text-lg sm:text-xl tracking-tight text-[#c3f400] uppercase truncate">
             IRONBENCH
           </span>
         </button>
@@ -70,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Right Cluster Actions */}
-      <div className="flex items-center gap-2 sm:gap-4">
+      <div className="flex items-center gap-1 sm:gap-4 shrink-0">
         {/* Streak Badge */}
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#222a3d] border border-[#444933]/60 shadow-sm">
           <span className="material-symbols-outlined text-[#ff5708] text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -106,16 +106,17 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Primary Action CTA Button */}
         <button
           onClick={onToggleWorkout}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-['Inter'] font-bold text-xs tracking-wider uppercase transition-all duration-150 active:scale-95 shadow-md cursor-pointer whitespace-nowrap ${
+          className={`flex items-center gap-1.5 px-2 sm:px-3.5 py-2 rounded-lg font-['Inter'] font-bold text-xs tracking-wider uppercase transition-all duration-150 active:scale-95 shadow-md cursor-pointer whitespace-nowrap ${
             isWorkoutActive
               ? 'bg-[#ff5708] text-[#ffffff] hover:bg-[#ff5708]/90 ring-2 ring-[#ff5708]/40 animate-pulse'
               : 'bg-[#c3f400] text-[#161e00] hover:bg-[#abd600]'
           }`}
+          aria-label={isWorkoutActive ? 'Detener sesión' : 'Iniciar sesión'}
         >
           <span className="material-symbols-outlined text-base">
             {isWorkoutActive ? 'stop_circle' : 'fitness_center'}
           </span>
-          <span>{isWorkoutActive ? 'Sesión en Curso' : 'Iniciar Sesión 40m'}</span>
+          <span className="hidden sm:inline">{isWorkoutActive ? 'Sesión en Curso' : 'Iniciar Sesión 40m'}</span>
         </button>
 
         {/* User Profile Avatar */}

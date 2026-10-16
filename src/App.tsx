@@ -1,17 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActiveTab, AnthropometricData, CompletedWorkoutLog, WeekDayId } from './types';
+import { WEEK_PLANS } from './data/mockData';
+import { AppState, loadAppState, saveAppState } from './lib/storage';
 import {
-  ActiveTab,
-  AnthropometricData,
-  CompletedWorkoutLog,
-  WeightHistoryPoint,
-  WorkoutExercise,
-} from './types';
-import {
-  INITIAL_ANTHROPOMETRICS,
-  INITIAL_EXERCISES,
-  INITIAL_LOGS,
-  WEIGHT_HISTORY,
-} from './data/mockData';
+  advanceStreak,
+  completedSetCount,
+  currentWeekDayId,
+  resetDayProgress,
+  sessionVolumeKg,
+  todayIsoDate,
+} from './lib/metrics';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { WorkoutScreen } from './components/WorkoutScreen';
@@ -25,37 +23,31 @@ import { AnthropometricModal } from './components/AnthropometricModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { ProfileModal } from './components/ProfileModal';
 import { InfoModal } from './components/InfoModal';
+import { PrivacyPolicyPage } from './components/PrivacyPolicyPage';
 import { MobileRestDock } from './components/MobileRestDock';
+
+function weekdayName(date: Date): string {
+  return date.toLocaleDateString('es-ES', { weekday: 'long' });
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('rutinas');
+  const [selectedDay, setSelectedDay] = useState<WeekDayId>(() => currentWeekDayId());
   const [isWorkoutActive, setIsWorkoutActive] = useState<boolean>(true);
-  const [streakDays, setStreakDays] = useState<number>(5);
+  const [stored] = useState<AppState>(() => loadAppState());
+  const [streak, setStreak] = useState(stored.streak);
+  const [restDays, setRestDays] = useState<WeekDayId[]>(stored.restDays);
 
-  // Rest Timer State - initial 42 seconds from Image 3 ("00:42")
-  const [restTimerSeconds, setRestTimerSeconds] = useState<number>(42);
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(true);
+  const [restTimerSeconds, setRestTimerSeconds] = useState<number>(60);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
 
-  // Exercises and Data with LocalStorage fallback
-  const [exercises, setExercises] = useState<WorkoutExercise[]>(() => {
-    const saved = localStorage.getItem('ironbench_exercises');
-    return saved ? JSON.parse(saved) : INITIAL_EXERCISES;
-  });
-
-  const [anthropometrics, setAnthropometrics] = useState<AnthropometricData>(() => {
-    const saved = localStorage.getItem('ironbench_anthropometrics');
-    return saved ? JSON.parse(saved) : INITIAL_ANTHROPOMETRICS;
-  });
-
-  const [weightHistory, setWeightHistory] = useState<WeightHistoryPoint[]>(() => {
-    const saved = localStorage.getItem('ironbench_history');
-    return saved ? JSON.parse(saved) : WEIGHT_HISTORY;
-  });
-
-  const [workoutLogs, setWorkoutLogs] = useState<CompletedWorkoutLog[]>(() => {
-    const saved = localStorage.getItem('ironbench_logs');
-    return saved ? JSON.parse(saved) : INITIAL_LOGS;
-  });
+  const [exercisesByDay, setExercisesByDay] = useState(stored.exercisesByDay);
+  const [anthropometrics, setAnthropometrics] = useState<AnthropometricData>(stored.anthropometrics);
+  const [weightHistory, setWeightHistory] = useState(stored.weightHistory);
+  const [workoutLogs, setWorkoutLogs] = useState<CompletedWorkoutLog[]>(stored.workoutLogs);
+  const sessionStartedAt = useRef(Date.now());
+  const exercises = exercisesByDay[selectedDay];
+  const activePlan = WEEK_PLANS.find((day) => day.id === selectedDay) ?? WEEK_PLANS[0];
 
   // Modal Dialog States
   const [is1RMOpen, setIs1RMOpen] = useState<boolean>(false);
@@ -63,6 +55,7 @@ export default function App() {
   const [isAnthroModalOpen, setIsAnthroModalOpen] = useState<boolean>(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [infoModal, setInfoModal] = useState<{ open: boolean; type: 'support' | 'terms' }>({
     open: false,
     type: 'support',
@@ -81,63 +74,62 @@ export default function App() {
     tempo: '3-1-1-0',
   });
 
-  // Persist exercises and metrics
   useEffect(() => {
-    localStorage.setItem('ironbench_exercises', JSON.stringify(exercises));
-  }, [exercises]);
+    saveAppState({
+      exercisesByDay,
+      anthropometrics,
+      weightHistory,
+      workoutLogs,
+      streak,
+      restDays,
+    });
+  }, [exercisesByDay, anthropometrics, weightHistory, workoutLogs, streak, restDays]);
 
-  useEffect(() => {
-    localStorage.setItem('ironbench_anthropometrics', JSON.stringify(anthropometrics));
-  }, [anthropometrics]);
-
-  useEffect(() => {
-    localStorage.setItem('ironbench_history', JSON.stringify(weightHistory));
-  }, [weightHistory]);
-
-  useEffect(() => {
-    localStorage.setItem('ironbench_logs', JSON.stringify(workoutLogs));
-  }, [workoutLogs]);
-
-  // Audio tone notification helper for timer completion
   const playTimerBeep = () => {
     try {
-      const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const audioCtx = new AudioContextClass();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
       gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.4);
+      osc.onended = () => {
+        void audioCtx.close();
+      };
     } catch {
       // Audio not permitted or supported in background
     }
   };
 
-  // Timer Tick Hook
   useEffect(() => {
     if (!isTimerRunning) return;
 
     const timer = setInterval(() => {
-      setRestTimerSeconds((prev) => {
-        if (prev <= 1) {
-          playTimerBeep();
-          return 60; // reset to 60s
-        }
-        return prev - 1;
-      });
+      setRestTimerSeconds((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
 
     return () => clearInterval(timer);
   }, [isTimerRunning]);
 
+  useEffect(() => {
+    if (restTimerSeconds !== 0 || !isTimerRunning) return;
+    setIsTimerRunning(false);
+    playTimerBeep();
+  }, [restTimerSeconds, isTimerRunning]);
+
   // Toggle set completion
   const handleToggleSet = (exerciseId: number, setId: string) => {
-    setExercises((prev) =>
-      prev.map((ex) => {
+    setExercisesByDay((days) => ({
+      ...days,
+      [selectedDay]: days[selectedDay].map((ex) => {
         if (ex.id !== exerciseId) return ex;
         const newSets = ex.sets.map((s) => {
           if (s.id === setId) {
@@ -158,14 +150,14 @@ export default function App() {
           completedCount,
           isCompleted: completedCount === ex.sets.length,
         };
-      })
-    );
+      }),
+    }));
   };
 
-  // Update set weight
   const handleUpdateWeight = (exerciseId: number, setId: string, delta: number) => {
-    setExercises((prev) =>
-      prev.map((ex) => {
+    setExercisesByDay((days) => ({
+      ...days,
+      [selectedDay]: days[selectedDay].map((ex) => {
         if (ex.id !== exerciseId) return ex;
         return {
           ...ex,
@@ -177,18 +169,25 @@ export default function App() {
             return s;
           }),
         };
-      })
-    );
+      }),
+    }));
   };
 
-  // Update exercise RPE per movement
   const handleUpdateExerciseRpe = (exerciseId: number, rpe: number) => {
-    setExercises((prev) =>
-      prev.map((ex) => {
+    setExercisesByDay((days) => ({
+      ...days,
+      [selectedDay]: days[selectedDay].map((ex) => {
         if (ex.id !== exerciseId) return ex;
         return { ...ex, actualRpe: rpe };
-      })
-    );
+      }),
+    }));
+  };
+
+  const handleSelectDay = (day: WeekDayId) => {
+    setSelectedDay(day);
+    sessionStartedAt.current = Date.now();
+    setRestTimerSeconds(60);
+    setIsTimerRunning(false);
   };
 
   // Next set handler for mobile dock
@@ -203,56 +202,81 @@ export default function App() {
   };
 
   // Finish and save workout
-  const handleFinishWorkout = (rpe: number, notes: string) => {
-    const completedSets = exercises.reduce(
-      (acc, ex) => acc + ex.sets.filter((s) => s.completed).length,
-      0
-    );
-    const totalVolume = exercises.reduce((acc, ex) => {
-      return (
-        acc +
-        ex.sets
-          .filter((s) => s.completed)
-          .reduce((sAcc, s) => {
-            const reps = typeof s.reps === 'number' ? s.reps : 10;
-            return sAcc + s.weight * 2 * reps;
-          }, 0)
-      );
-    }, 0);
+  const handleToggleRestDay = (day: WeekDayId) => {
+    setRestDays((prev) => (prev.includes(day) ? prev.filter((item) => item !== day) : [...prev, day]));
+  };
 
+  const handleFinishWorkout = (rpe: number, notes: string): boolean => {
+    const isRestDay = restDays.includes(selectedDay);
+    const doneSets = completedSetCount(exercises);
+    const today = todayIsoDate();
+    if (!isRestDay && doneSets === 0) return false;
+    if (
+      isRestDay &&
+      workoutLogs.some((log) => log.isoDate === today && log.dayName === activePlan.name && log.title.startsWith('Descanso'))
+    ) {
+      return false;
+    }
+
+    const now = new Date();
+    const elapsedMinutes = Math.max(1, Math.round((Date.now() - sessionStartedAt.current) / 60000));
+    const trimmedNotes = notes.trim();
     const newLog: CompletedWorkoutLog = {
       id: `log-${Date.now()}`,
-      date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
-      dayName: 'Lunes',
-      title: 'Pecho Dominante & Tríceps Asistido',
-      durationMinutes: 38,
-      exercisesCompleted: exercises.filter((ex) => ex.sets.every((s) => s.completed)).length,
-      totalExercises: exercises.length,
-      totalVolumeKg: totalVolume > 0 ? totalVolume : 4280,
-      rpe,
-      notes,
+      date: now.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+      dayName: activePlan.name,
+      title: isRestDay ? `Descanso · ${activePlan.name}` : activePlan.sessionTitle,
+      durationMinutes: isRestDay ? 0 : elapsedMinutes,
+      exercisesCompleted: isRestDay
+        ? 0
+        : exercises.filter((ex) => ex.sets.length > 0 && ex.sets.every((s) => s.completed)).length,
+      totalExercises: isRestDay ? 0 : exercises.length,
+      totalVolumeKg: isRestDay ? 0 : Math.round(sessionVolumeKg(exercises)),
+      rpe: isRestDay ? 0 : rpe,
+      notes: trimmedNotes || (isRestDay ? 'Día de recuperación.' : 'Sin notas.'),
+      isoDate: today,
     };
 
     setWorkoutLogs((prev) => [newLog, ...prev]);
-    setStreakDays((prev) => prev + 1);
+    setStreak((prev) => advanceStreak(prev, today));
+    if (!isRestDay) {
+      setExercisesByDay((days) => ({
+        ...days,
+        [selectedDay]: resetDayProgress(selectedDay, days[selectedDay]),
+      }));
+    }
+    sessionStartedAt.current = Date.now();
+    setRestTimerSeconds(60);
+    setIsTimerRunning(false);
+    return true;
   };
 
   // Anthropometrics Update
   const handleUpdateAnthropometrics = (newData: Partial<AnthropometricData>) => {
     setAnthropometrics((prev) => {
       const updated = { ...prev, ...newData };
-      // Also update latest point in weight history
-      setWeightHistory((hPrev) => {
-        const copy = [...hPrev];
-        if (copy.length > 0) {
-          copy[copy.length - 1] = {
-            ...copy[copy.length - 1],
-            weight: updated.peso,
-            waist: updated.cintura,
-            arm: updated.biceps,
-          };
+      const now = new Date();
+      const isoDate = todayIsoDate(now);
+      const point = {
+        week: 'Hoy',
+        label: now.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+        day: weekdayName(now),
+        date: now.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+        isoDate,
+        weight: updated.peso,
+        waist: updated.cintura,
+        arm: updated.biceps,
+        chest: updated.pecho,
+        thigh: updated.muslo,
+        forearm: updated.antebrazo,
+        bodyFat: updated.grasaPct,
+      };
+      setWeightHistory((history) => {
+        const last = history[history.length - 1];
+        if (last?.isoDate === isoDate) {
+          return [...history.slice(0, -1), { ...last, ...point }];
         }
-        return copy;
+        return [...history, point];
       });
       return updated;
     });
@@ -269,7 +293,7 @@ export default function App() {
           setIsWorkoutActive(!isWorkoutActive);
           if (!isWorkoutActive) setActiveTab('rutinas');
         }}
-        streakDays={streakDays}
+        streakDays={streak.count}
         onOpenTimer={() => {
           setActiveTab('rutinas');
           setIsTimerRunning(true);
@@ -283,6 +307,8 @@ export default function App() {
         {activeTab === 'rutinas' && (
           <WorkoutScreen
             exercises={exercises}
+            selectedDay={selectedDay}
+            onSelectDay={handleSelectDay}
             onToggleSet={handleToggleSet}
             onUpdateWeight={handleUpdateWeight}
             onOpenTechniqueModal={(title, muscle, tempo, img) =>
@@ -306,6 +332,8 @@ export default function App() {
             }}
             isWorkoutActive={isWorkoutActive}
             onStartSession={() => setIsWorkoutActive(true)}
+            restDays={restDays}
+            onToggleRestDay={handleToggleRestDay}
           />
         )}
 
@@ -333,7 +361,7 @@ export default function App() {
         )}
 
         {activeTab === 'historial' && (
-          <HistoryScreen logs={workoutLogs} streakDays={streakDays} />
+          <HistoryScreen logs={workoutLogs} streakDays={streak.count} />
         )}
       </main>
 
@@ -353,7 +381,7 @@ export default function App() {
         onOpenGuide={() => setIsGuideOpen(true)}
         onOpen1RM={() => setIs1RMOpen(true)}
         onOpenSupport={() => setInfoModal({ open: true, type: 'support' })}
-        onOpenTerms={() => setInfoModal({ open: true, type: 'terms' })}
+        onOpenPrivacy={() => setIsPrivacyOpen(true)}
       />
 
       {/* Dialog Modals */}
@@ -386,8 +414,10 @@ export default function App() {
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
         data={anthropometrics}
-        streakDays={streakDays}
+        streakDays={streak.count}
       />
+
+      {isPrivacyOpen && <PrivacyPolicyPage onClose={() => setIsPrivacyOpen(false)} />}
 
       <InfoModal
         isOpen={infoModal.open}
