@@ -45,10 +45,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
           <div>
             <div className="font-['Montserrat'] font-bold text-base text-[#ffffff]">
-              Alex Vance
+              Tu entrenamiento
             </div>
             <div className="text-xs text-[#9cf0ff] font-semibold">
-              Nivel: Intermedio Avanzado
+              Datos de este dispositivo
             </div>
             <div className="text-[11px] text-[#8e9379] mt-0.5">
               Protocolo: Banco Ajustable & Mancuernas

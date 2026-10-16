@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { WeekDayId, WorkoutExercise } from '../types';
 import { WEEK_PLANS } from '../data/mockData';
 import { currentWeekDayId } from '../lib/metrics';
+import { PlayStoreBadge } from './PlayStoreBadge';
 
 interface WorkoutScreenProps {
   exercises: WorkoutExercise[];
@@ -267,6 +268,9 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
             <p className="font-['Inter'] text-sm sm:text-base text-[#c4c9ac] max-w-2xl mt-1 leading-relaxed">
               Rutina concentrada de 35 a 40 minutos con sobrecarga progresiva calibrada. Cero distracciones, ejecución biomecánica impecable.
             </p>
+            <div className="mt-4">
+              <PlayStoreBadge className="h-14" />
+            </div>
           </div>
 
           {/* Quick Live Stat Metric Card */}
