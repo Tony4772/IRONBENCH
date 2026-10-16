@@ -1,0 +1,6 @@
+{
+  "name": "IRONBENCH - High-Performance Conditioning",
+  "description": "Supervisión antropométrica de alta precisión, rutinas diarias con mancuernas y banco, y calibración biomecánica.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
