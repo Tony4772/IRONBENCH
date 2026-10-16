@@ -862,11 +862,11 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                     <div className="w-9 h-9 rounded-lg bg-[#222a3d] border border-[#444933] text-[#c3f400] flex items-center justify-center font-['Montserrat'] font-extrabold text-base flex-shrink-0">
                       {ex.id}
                     </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                        <span className="px-2 py-0.5 rounded bg-[#c3f400]/10 border border-[#c3f400]/30 text-[#c3f400] text-[10px] font-bold uppercase">
-                          {ex.targetMuscle}
-                        </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                      <span className="px-2 py-0.5 rounded bg-[#c3f400]/10 border border-[#c3f400]/30 text-[#c3f400] text-[10px] font-bold uppercase">
+                        {ex.targetMuscle}
+                      </span>
                         <span className="px-2 py-0.5 rounded bg-[#222a3d] border border-[#444933]/40 text-[#c4c9ac] text-[10px] font-semibold">
                           {ex.benchAngle}
                         </span>
@@ -890,6 +890,17 @@ export const WorkoutScreen: React.FC<WorkoutScreenProps> = ({
                     <span>Guía</span>
                   </button>
                 </div>
+
+                {ex.imageUrl && (
+                  <div className="h-36 rounded-lg overflow-hidden border border-[#444933]/50">
+                    <img
+                      src={ex.imageUrl}
+                      alt={ex.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
 
                 {ex.coachTip && (
                   <div className="flex items-center gap-2 bg-[#060e20] p-2.5 rounded-lg border border-[#444933]/30 text-xs text-[#c4c9ac]">

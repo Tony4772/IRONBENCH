@@ -112,6 +112,22 @@ function asStreak(value: unknown): StreakState | null {
   return { count: value.count, lastWorkoutDate: last ?? null };
 }
 
+function mergeTemplate(template: WorkoutExercise[], saved: WorkoutExercise[]): WorkoutExercise[] {
+  return template.map((exercise) => {
+    const previous = saved.find((item) => item.name === exercise.name);
+    if (!previous) return exercise;
+    return {
+      ...exercise,
+      actualRpe: typeof previous.actualRpe === 'number' ? previous.actualRpe : exercise.actualRpe,
+      sets: exercise.sets.map((set, index) => {
+        const old = previous.sets[index];
+        if (!old || typeof old.weight !== 'number') return set;
+        return { ...set, weight: old.weight, completed: old.completed === true };
+      }),
+    };
+  });
+}
+
 function readLegacy(): Partial<AppState> {
   if (typeof localStorage === 'undefined') return {};
   const exercises = asExercises(parseJson(localStorage.getItem(LEGACY_KEYS.exercises)));
@@ -141,16 +157,15 @@ export function loadAppState(): AppState {
 
   const saved = parseJson(localStorage.getItem(STORAGE_KEY));
   const legacy = readLegacy();
-  const source = isObject(saved) && saved.version === 1 ? saved : null;
+  const source = isObject(saved) && (saved.version === 1 || saved.version === 2 || saved.version === 3) ? saved : null;
   const exercisesByDay = { ...fallback.exercisesByDay };
 
   const savedDays = source && isObject(source.exercisesByDay) ? source.exercisesByDay : null;
-  const daySource = savedDays ?? legacy.exercisesByDay ?? null;
-  if (daySource) {
-    for (const [day, value] of Object.entries(daySource)) {
+  if (savedDays) {
+    for (const [day, value] of Object.entries(savedDays)) {
       if (!isWeekDayId(day)) continue;
       const exercises = asExercises(value);
-      if (exercises) exercisesByDay[day] = exercises;
+      if (exercises) exercisesByDay[day] = mergeTemplate(fallback.exercisesByDay[day], exercises);
     }
   }
 
@@ -171,7 +186,7 @@ export function loadAppState(): AppState {
 export function saveAppState(state: AppState): void {
   if (typeof localStorage === 'undefined') return;
   const payload = {
-    version: 1 as const,
+    version: 3 as const,
     exercisesByDay: state.exercisesByDay,
     anthropometrics: state.anthropometrics,
     weightHistory: state.weightHistory,
