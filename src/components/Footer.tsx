@@ -1,4 +1,5 @@
 import React from 'react';
+import { PlayStoreBadge } from './PlayStoreBadge';
 
 interface FooterProps {
   onOpenGuide: () => void;
@@ -24,6 +25,7 @@ export const Footer: React.FC<FooterProps> = ({
           Diseño y creación de <span className="text-[#ffffff]">EBYZOM E.I.R.L.</span>
           <span className="block mt-1">© 2026 IRONBENCH. Mancuernas y banco sin excusas.</span>
         </p>
+        <PlayStoreBadge />
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs font-['Inter'] font-semibold">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ActiveTab } from '../types';
 import { IMAGES } from '../data/mockData';
+import { PlayStoreBadge } from './PlayStoreBadge';
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -151,6 +152,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-xs text-[#c4c9ac] font-semibold">MENÚ PRINCIPAL</span>
             <span className="text-xs text-[#ffb59c] font-bold">Racha: {streakDays} Días</span>
           </div>
+          <PlayStoreBadge className="h-12 self-center" />
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
